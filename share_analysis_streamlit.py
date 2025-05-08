@@ -81,7 +81,10 @@ def load_correlation_data(depth):
     try:
         # Replace with your actual GitHub repository URL - adjust this to your repo!
         github_url = f"https://raw.githubusercontent.com/klein2712/ocean_data_analysis/main/correlation_data/correlation_data_{depth}m.csv"
+        st.write(f"Attempting to load from: {github_url}")
         data = pd.read_csv(github_url)
+        st.write(f"Loaded data with columns: {list(data.columns)}")
+        st.write(f"Data types: {data.dtypes}")
         return data
     except Exception as e:
         st.error(f"Fehler beim Laden der Korrelationsdaten: {str(e)}")
