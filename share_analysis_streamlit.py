@@ -164,12 +164,8 @@ if visualization_type == "2D Weltkarte":
                         </div>
                     </div>
                     <div style="margin-top: 10px;">
-                        <span style="color: blue; font-weight: bold;">Blau</span>: Negative Korrelation (gegenläufig) | 
-                        <span style="color: red; font-weight: bold;">Rot</span>: Positive Korrelation (gleichläufig)
-                    </div>
-                    <div style="margin-top: 5px; font-size: 0.9em; color: #555;">
-                        Die Größe der Punkte entspricht der Stärke der Korrelation. Je stärker die Korrelation (näher an -1 oder +1), 
-                        desto größer der Punkt auf der Karte.
+                        <span style="color: blue; font-weight: bold;">Blau</span>: Negative Korrelation  | 
+                        <span style="color: red; font-weight: bold;">Rot</span>: Positive Korrelation 
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
