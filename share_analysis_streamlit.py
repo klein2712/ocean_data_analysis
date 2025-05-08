@@ -4,9 +4,9 @@ import pandas as pd
 import plotly.express as px
 import numpy as np
 from streamlit.components.v1 import html
-import base64
-from pathlib import Path
 
+
+#NOTE THIS IS A BACKUPF FILE
 # Set page configuration
 st.set_page_config(page_title="KIK - Ozeanographische Datenanalyse", layout="wide")
 
@@ -57,158 +57,104 @@ selected_depth = st.select_slider(
     options=depths
 )
 
-# Improved function to load correlation data
+# Function to load correlation data for map visualization
 @st.cache_data
 def load_correlation_data(depth):
-    # Try multiple possible paths to handle both local and cloud environments
+    # Try multiple path variations to handle different environments
     possible_paths = [
         f"./correlation_data/correlation_data_{depth}m.csv",
-        f"correlation_data/correlation_data_{depth}m.csv",
-        f"../correlation_data/correlation_data_{depth}m.csv",
-        f"/app/correlation_data/correlation_data_{depth}m.csv",  # Common path in containerized environments
+        f"correlation_data/correlation_data_{depth}m.csv",  # No leading dot
+        os.path.join("correlation_data", f"correlation_data_{depth}m.csv"),  # OS-agnostic path
     ]
     
-    # Try each path until one works
+    # Try each possible path
     for file_path in possible_paths:
         try:
-            if Path(file_path).exists():
+            if os.path.exists(file_path):
                 data = pd.read_csv(file_path)
-                st.success(f"Successfully loaded data from {file_path}")
-                
-                # Add this right after loading the data
-                if data is not None:
-                    # Convert coordinate columns to numeric values
-                    data['latitude'] = pd.to_numeric(data['latitude'], errors='coerce')
-                    data['longitude'] = pd.to_numeric(data['longitude'], errors='coerce')
-                    data['correlation'] = pd.to_numeric(data['correlation'], errors='coerce')
-                    
-                    # Drop any rows with NaN values after conversion
-                    data = data.dropna(subset=['latitude', 'longitude', 'correlation'])
-                    
-                    st.write(f"Data types: {data.dtypes}")
-                
-                return data
+                if len(data) > 0:
+                    return data
         except Exception:
             continue
     
-    # If we get here, none of the paths worked
-    st.error(f"Couldn't find correlation data for depth {depth}m. Please check file paths.")
-    
-    # Show available files in current directory to help debug
+    # If we get here, try to load directly from GitHub (if this is deployed)
     try:
-        current_dir = os.getcwd()
-        files_in_dir = os.listdir(current_dir)
-        st.error(f"Current directory: {current_dir}")
-        st.error(f"Files in current directory: {files_in_dir}")
-        
-        # Check if correlation_data folder exists
-        if os.path.exists("correlation_data"):
-            correlation_files = os.listdir("correlation_data")
-            st.error(f"Files in correlation_data: {correlation_files}")
+        # Replace with your actual GitHub repository URL - adjust this to your repo!
+        github_url = f"https://raw.githubusercontent.com/klein2712/ocean_data_analysis/main/correlation_data/correlation_data_{depth}m.csv"
+        data = pd.read_csv(github_url)
+        return data
     except Exception as e:
-        st.error(f"Error inspecting directories: {str(e)}")
-    
-    return None
+        st.error(f"Fehler beim Laden der Korrelationsdaten: {str(e)}")
+        
+        # Show debugging information
+        st.error("Debugging Information:")
+        st.write(f"Working directory: {os.getcwd()}")
+        try:
+            st.write("Available directories:")
+            st.write(os.listdir("."))
+        except:
+            pass
+            
+        return None
 
 # Display visualization based on selected type
 if visualization_type == "2D Weltkarte":
     # 2D Map visualization (from ocean_map_visualization.py)
-    data = load_correlation_data(selected_depth)
-    
-    if data is not None:
-        st.write(f"Anzeige der Daten für Tiefe: {selected_depth}m - {len(data)} Datenpunkte")
+    try:
+        data = load_correlation_data(selected_depth)
+        
+        if data is not None:
+            st.write(f"Anzeige der Daten für Tiefe: {selected_depth}m - {len(data)} Datenpunkte")
 
-        # Filter for minimum correlation
-        min_correlation = st.slider("Minimale absolute Korrelation:", 0.0, 1.0, 0.0, 0.01)
-        show_significant_only = st.checkbox("Nur signifikante Korrelationen anzeigen")
-        
-        # Filter the data based on user selections
-        filtered_data = data.copy()
-        if show_significant_only:
-            filtered_data = filtered_data[filtered_data['significant'] == True]
-        if min_correlation > 0:
-            filtered_data = filtered_data[abs(filtered_data['correlation']) >= min_correlation]
-        
-        # Prepare the data for visualization
-        filtered_data = filtered_data.reset_index(drop=True)
-        
-        # Add debug information
-        st.write(f"Filtered data points: {len(filtered_data)}")
-        if len(filtered_data) == 0:
-            st.warning("No data points match your filter criteria.")
-            # Show a sample of the original data for debugging
-            st.write("Sample of original data:")
-            st.write(data.head())
-        
-        # Scale circle size based on correlation strength
-        filtered_data['size'] = 5 + 15 * np.abs(filtered_data['correlation'])
-        
-        # Calculate height to use most of viewport
-        map_height = 800
-        
-        # Create a Plotly figure with a color scale - USING GEO INSTEAD OF MAPBOX
-        fig = px.scatter_geo(
-            filtered_data,
-            lat="latitude",
-            lon="longitude",
-            color="correlation",
-            size="size",
-            color_continuous_scale="RdBu_r",  # Red-Blue scale, red for positive, blue for negative
-            range_color=[-1, 1],
-            height=map_height,
-            hover_data=["correlation", "p_value", "count", "significant"]
-        )
-
-        # Configure the map layout to show the entire world
-        fig.update_geos(
-            projection_type="natural earth",  # A simple projection that works well
-            showcoastlines=True,
-            coastlinecolor="Black",
-            showland=True,
-            landcolor="lightgray",
-            showocean=True,
-            oceancolor="lightblue",
-            showlakes=True,
-            lakecolor="lightblue",
-            showcountries=True,
-            countrycolor="gray",
-            fitbounds="locations"  # Auto-fit to data points
-        )
-
-        fig.update_layout(
-            height=map_height,
-            margin=dict(l=0, r=0, t=0, b=0),
-        )
-
-        # Display the map with full width
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Add this after the plotly chart
-        if st.checkbox("Map not displaying correctly? Try alternative visualization"):
-            st.subheader("Alternative Visualization")
-            # Create a simpler scatter plot as fallback
-            alt_fig = px.scatter(
+            # Filter for minimum correlation
+            min_correlation = st.slider("Minimale absolute Korrelation:", 0.0, 1.0, 0.0, 0.01)
+            show_significant_only = st.checkbox("Nur signifikante Korrelationen anzeigen")
+            
+            # Filter the data based on user selections
+            filtered_data = data.copy()
+            if show_significant_only:
+                filtered_data = filtered_data[filtered_data['significant'] == True]
+            if min_correlation > 0:
+                filtered_data = filtered_data[abs(filtered_data['correlation']) >= min_correlation]
+            
+            # Prepare the data for visualization
+            filtered_data = filtered_data.reset_index(drop=True)
+            # Scale circle size based on correlation strength
+            filtered_data['size'] = 5 + 15 * np.abs(filtered_data['correlation'])
+            
+            # Calculate height to use most of viewport
+            map_height = 800
+            
+            # Create a Plotly figure with a color scale
+            fig = px.scatter_mapbox(
                 filtered_data,
-                x="longitude", 
-                y="latitude",
+                lat="latitude",
+                lon="longitude",
                 color="correlation",
                 size="size",
-                color_continuous_scale="RdBu_r",
+                color_continuous_scale="RdBu_r",  # Red-Blue scale, red for positive, blue for negative
                 range_color=[-1, 1],
-                hover_data=["correlation", "p_value", "count", "significant"],
-                width=1000, 
-                height=500
+                zoom=1,
+                height=map_height,
+                opacity=0.7,
+                mapbox_style="open-street-map",  # No API token required
+                hover_data=["correlation", "p_value", "count", "significant"]
             )
-            # Add a grid to represent the world map
-            alt_fig.update_layout(
-                xaxis=dict(range=[-180, 180], title="Longitude", gridcolor="lightgray"),
-                yaxis=dict(range=[-90, 90], title="Latitude", gridcolor="lightgray", scaleanchor="x", scaleratio=1),
-                plot_bgcolor="white"
+            
+            fig.update_layout(
+                margin=dict(l=0, r=0, t=0, b=0),
+                mapbox=dict(
+                    center=dict(lat=0, lon=0),
+                    zoom=1
+                )
             )
-            st.plotly_chart(alt_fig, use_container_width=True)
-    else:
-        st.error("Keine Daten für die Kartenvisualisierung verfügbar.")
-        st.write("Bitte stellen Sie sicher, dass die Datendateien korrekt hochgeladen wurden.")
+            
+            # Display the map with full width
+            st.plotly_chart(fig, use_container_width=True)
+            
+    except Exception as e:
+        st.error(f"Fehler bei der Kartenvisualisierung für Tiefe {selected_depth}m: {str(e)}")
+        st.write("Bitte überprüfen Sie, ob die Datei existiert und korrekt formatiert ist.")
 
 else:  # 3D Scatterplot visualization (original)
     # Path to the HTML file for the selected depth
