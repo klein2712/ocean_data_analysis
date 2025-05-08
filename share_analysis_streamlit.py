@@ -103,17 +103,34 @@ if visualization_type == "2D Weltkarte":
     try:
         data = load_correlation_data(selected_depth)
         
-        # Replace the mapbox visualization with a more reliable geo visualization
+        # Add debug information to check the loaded data
         if data is not None:
             st.write(f"Anzeige der Daten für Tiefe: {selected_depth}m - {len(data)} Datenpunkte")
-
+            
+            # Add data validation and type conversion
+            # Ensure 'significant' is boolean
+            if 'significant' in data.columns:
+                if data['significant'].dtype != bool:
+                    data['significant'] = data['significant'].astype(str).map({'True': True, 'False': False})
+            
+            # Ensure numeric columns are numeric
+            for col in ['latitude', 'longitude', 'correlation', 'p_value']:
+                if col in data.columns:
+                    data[col] = pd.to_numeric(data[col], errors='coerce')
+            
+            # Remove any rows with NaN in critical fields
+            data = data.dropna(subset=['latitude', 'longitude', 'correlation'])
+            
+            # Show data summary for debugging
+            st.write(f"Nach Datenbereinigung: {len(data)} Datenpunkte")
+            
             # Filter for minimum correlation
             min_correlation = st.slider("Minimale absolute Korrelation:", 0.0, 1.0, 0.0, 0.01)
             show_significant_only = st.checkbox("Nur signifikante Korrelationen anzeigen")
             
             # Filter the data based on user selections
             filtered_data = data.copy()
-            if show_significant_only:
+            if show_significant_only and 'significant' in filtered_data.columns:
                 filtered_data = filtered_data[filtered_data['significant'] == True]
             if min_correlation > 0:
                 filtered_data = filtered_data[abs(filtered_data['correlation']) >= min_correlation]
@@ -123,18 +140,18 @@ if visualization_type == "2D Weltkarte":
             # Scale point size based on correlation strength
             filtered_data['size'] = 3 + 7 * np.abs(filtered_data['correlation'])
             
-            # Create a Plotly figure using scatter_geo instead of scatter_mapbox
+            # Create a Plotly figure using scatter_geo
             fig = px.scatter_geo(
                 filtered_data,
                 lat="latitude",
                 lon="longitude",
                 color="correlation",
                 size="size",
-                color_continuous_scale="RdBu_r",  # Red-Blue scale, red for positive, blue for negative
+                color_continuous_scale="RdBu_r",
                 range_color=[-1, 1],
                 opacity=0.7,
-                projection="natural earth",  # Natural Earth projection looks good
-                hover_data=["correlation", "p_value", "count", "significant"],
+                projection="natural earth",
+                hover_data=["correlation", "p_value"],
                 height=800,
             )
             
@@ -143,7 +160,7 @@ if visualization_type == "2D Weltkarte":
                 geo=dict(
                     showland=True,
                     landcolor="rgb(217, 217, 217)",
-                    coastlinecolor="white",
+                    coastlinecolor="white", 
                     showocean=True,
                     oceancolor="rgb(242, 242, 242)",
                     showcountries=True,
@@ -151,11 +168,16 @@ if visualization_type == "2D Weltkarte":
                 )
             )
             
+            # Display row count after filtering
+            st.write(f"Anzahl der angezeigten Datenpunkte: {len(filtered_data)}")
+            
             # Display the map with full width
             st.plotly_chart(fig, use_container_width=True)
             
     except Exception as e:
         st.error(f"Fehler bei der Kartenvisualisierung für Tiefe {selected_depth}m: {str(e)}")
+        import traceback
+        st.write(traceback.format_exc())
         st.write("Bitte überprüfen Sie, ob die Datei existiert und korrekt formatiert ist.")
 
 else:  # 3D Scatterplot visualization (original)
