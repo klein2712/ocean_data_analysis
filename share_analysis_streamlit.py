@@ -74,6 +74,19 @@ def load_correlation_data(depth):
             if Path(file_path).exists():
                 data = pd.read_csv(file_path)
                 st.success(f"Successfully loaded data from {file_path}")
+                
+                # Add this right after loading the data
+                if data is not None:
+                    # Convert coordinate columns to numeric values
+                    data['latitude'] = pd.to_numeric(data['latitude'], errors='coerce')
+                    data['longitude'] = pd.to_numeric(data['longitude'], errors='coerce')
+                    data['correlation'] = pd.to_numeric(data['correlation'], errors='coerce')
+                    
+                    # Drop any rows with NaN values after conversion
+                    data = data.dropna(subset=['latitude', 'longitude', 'correlation'])
+                    
+                    st.write(f"Data types: {data.dtypes}")
+                
                 return data
         except Exception:
             continue
@@ -145,7 +158,7 @@ if visualization_type == "2D Weltkarte":
             zoom=1,
             height=map_height,
             opacity=0.7,
-            mapbox_style="open-street-map",  # No API token required
+            mapbox_style="carto-positron",  # Use a more reliable style
             hover_data=["correlation", "p_value", "count", "significant"]
         )
         
@@ -153,12 +166,36 @@ if visualization_type == "2D Weltkarte":
             margin=dict(l=0, r=0, t=0, b=0),
             mapbox=dict(
                 center=dict(lat=0, lon=0),
-                zoom=1
+                zoom=0.8  # Adjust zoom to show more of the globe
             )
         )
         
         # Display the map with full width
         st.plotly_chart(fig, use_container_width=True)
+        
+        # Add this after the plotly chart
+        if st.checkbox("Map not displaying correctly? Try alternative visualization"):
+            st.subheader("Alternative Visualization")
+            # Create a simpler scatter plot as fallback
+            alt_fig = px.scatter(
+                filtered_data,
+                x="longitude", 
+                y="latitude",
+                color="correlation",
+                size="size",
+                color_continuous_scale="RdBu_r",
+                range_color=[-1, 1],
+                hover_data=["correlation", "p_value", "count", "significant"],
+                width=1000, 
+                height=500
+            )
+            # Add a grid to represent the world map
+            alt_fig.update_layout(
+                xaxis=dict(range=[-180, 180], title="Longitude", gridcolor="lightgray"),
+                yaxis=dict(range=[-90, 90], title="Latitude", gridcolor="lightgray", scaleanchor="x", scaleratio=1),
+                plot_bgcolor="white"
+            )
+            st.plotly_chart(alt_fig, use_container_width=True)
     else:
         st.error("Keine Daten für die Kartenvisualisierung verfügbar.")
         st.write("Bitte stellen Sie sicher, dass die Datendateien korrekt hochgeladen wurden.")
