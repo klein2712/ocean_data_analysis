@@ -148,7 +148,7 @@ if visualization_type == "2D Weltkarte":
                 
                 # Add a color legend
                 st.markdown("""
-                <div style="background-color: #f0f2f6; padding: 15px; border-radius: 5px; margin-top: 20px; max-width: 600px;">
+                <div style="padding: 15px; margin-top: 20px; max-width: 600px;">
                     <h4 style="margin-top: 0; margin-bottom: 10px;">Legende: Korrelationskoeffizient</h4>
                     <div style="display: flex; flex-direction: column; gap: 5px;">
                         <div style="display: flex; align-items: center;">
