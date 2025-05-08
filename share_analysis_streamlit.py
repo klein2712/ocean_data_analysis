@@ -121,69 +121,106 @@ if visualization_type == "2D Weltkarte":
             st.write("Beispieldaten (erste 3 Zeilen):")
             st.dataframe(data.head(3))
             
-            # Filter for minimum correlation - simplified
+            # Filter for minimum correlation
             min_correlation = st.slider("Minimale absolute Korrelation:", 0.0, 1.0, 0.0, 0.01)
             filtered_data = data[data['correlation'].abs() >= min_correlation]
             
-            # SIMPLIFIED PLOTTING - Focus on just making points visible
-            fig = px.scatter_geo(
-                filtered_data,
-                lat="latitude", 
-                lon="longitude",
-                color="correlation",
-                # Remove size parameter for now
-                # size="size",
-                color_continuous_scale="RdBu_r",
-                range_color=[-1, 1],
-                height=600,
-                # Use a simpler projection
-                projection="equirectangular"
-            )
+            # Use folium for map visualization
+            st.write("Lade Karte...")
             
-            # Simplified layout
-            fig.update_geos(
-                showcoastlines=True,
-                coastlinecolor="black",
-                showland=True,
-                landcolor="lightgray",
-                showocean=True,
-                oceancolor="aliceblue"
-            )
+            # Install folium if not already installed
+            import pip
+            try:
+                import folium
+                from streamlit_folium import st_folium
+            except ImportError:
+                st.write("Installing required packages...")
+                pip.main(['install', 'folium', 'streamlit-folium'])
+                import folium
+                from streamlit_folium import st_folium
             
-            # Set marker size directly instead of using a column
-            fig.update_traces(marker=dict(size=5))
+            # Create a base map
+            m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB positron")
+            
+            # Add correlation points with colors
+            for _, row in filtered_data.iterrows():
+                # Determine color based on correlation value
+                if row['correlation'] > 0:
+                    color = f'#{int(255 * min(1, row["correlation"])):#04x}0000'
+                else:
+                    color = f'#0000{int(255 * min(1, abs(row["correlation"]))):#04x}'
+                
+                # Create popup content
+                popup_content = f"""
+                <b>Korrelation:</b> {row['correlation']:.2f}<br>
+                <b>Koordinaten:</b> {row['latitude']:.2f}, {row['longitude']:.2f}
+                """
+                
+                # Add marker to map
+                folium.CircleMarker(
+                    location=[row['latitude'], row['longitude']],
+                    radius=3 + 5 * abs(row['correlation']),  # Size based on correlation strength
+                    popup=folium.Popup(popup_content, max_width=200),
+                    color=color,
+                    fill=True,
+                    fill_opacity=0.7
+                ).add_to(m)
             
             # Display the map
             st.write(f"Anzahl der angezeigten Datenpunkte: {len(filtered_data)}")
-            st.plotly_chart(fig, use_container_width=True)
+            st_folium(m, width=1000, height=600)
             
-            # If the above doesn't work, try an alternative approach with go.Scattergeo
+            # Alternative: Static map with Matplotlib
             if st.button("Alternative Karte anzeigen"):
-                import plotly.graph_objects as go
+                st.write("Generiere alternative Karte...")
                 
-                # Create a basic scattergeo plot
-                fig = go.Figure(data=go.Scattergeo(
-                    lon=filtered_data['longitude'],
-                    lat=filtered_data['latitude'],
-                    text=filtered_data['correlation'].round(2),
-                    mode='markers',
-                    marker=dict(
-                        size=5,
-                        color=filtered_data['correlation'],
-                        colorscale='RdBu_r',
-                        cmin=-1,
-                        cmax=1,
-                        colorbar=dict(title='Korrelation')
+                # Import required packages
+                import matplotlib.pyplot as plt
+                import matplotlib.colors as mcolors
+                from mpl_toolkits.basemap import Basemap
+                
+                try:
+                    # Create figure
+                    fig, ax = plt.subplots(figsize=(12, 8))
+                    
+                    # Create map
+                    m = Basemap(projection='robin', resolution='l', 
+                                lat_0=0, lon_0=0, ax=ax)
+                    
+                    # Draw map elements
+                    m.drawcoastlines()
+                    m.drawcountries()
+                    m.fillcontinents(color='lightgray', lake_color='aliceblue')
+                    m.drawmapboundary(fill_color='aliceblue')
+                    m.drawparallels(np.arange(-90, 91, 30), labels=[1, 0, 0, 0])
+                    m.drawmeridians(np.arange(-180, 181, 60), labels=[0, 0, 0, 1])
+                    
+                    # Convert lat/lon to map coordinates
+                    x, y = m(filtered_data['longitude'].values, filtered_data['latitude'].values)
+                    
+                    # Create a scatter plot of points
+                    sc = m.scatter(
+                        x, y, 
+                        c=filtered_data['correlation'], 
+                        cmap='RdBu_r',
+                        s=20, 
+                        alpha=0.7,
+                        vmin=-1, vmax=1
                     )
-                ))
-                
-                fig.update_layout(
-                    title=f"T-S Korrelation auf {selected_depth}m Tiefe",
-                    height=600
-                )
-                
-                st.plotly_chart(fig, use_container_width=True)
-                
+                    
+                    # Add colorbar
+                    cbar = plt.colorbar(sc, ax=ax, shrink=0.6)
+                    cbar.set_label('Korrelation (Pearson)')
+                    
+                    # Add title
+                    plt.title(f"T-S Korrelation auf {selected_depth}m Tiefe")
+                    
+                    # Display the plot
+                    st.pyplot(fig)
+                    
+                except Exception as e:
+                    st.error(f"Fehler bei der alternativen Karte: {str(e)}")
+            
     except Exception as e:
         st.error(f"Fehler bei der Kartenvisualisierung: {str(e)}")
         import traceback
