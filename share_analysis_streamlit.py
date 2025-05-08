@@ -117,9 +117,9 @@ if visualization_type == "2D Weltkarte":
             # Create a base map
             m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB positron")
             
-            # Create color function - with correct red-blue gradient
-            # Using reversed scale (-1, 1) → (1, -1) ensures red is positive, blue is negative
-            colormap = linear.RdBu_09.scale(1, -1)
+            # Create proper color function - negative values (blue) to positive values (red)
+            # Fix: use RdBu_r and correct scale parameters
+            colormap = linear.RdBu_r.scale(-1, 1)
             
             # Add correlation points with proper colors
             for _, row in filtered_data.iterrows():
