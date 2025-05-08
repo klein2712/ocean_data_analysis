@@ -117,8 +117,9 @@ if visualization_type == "2D Weltkarte":
             # Create a base map
             m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB positron")
             
-            # Create color function - properly maps correlation values to red-blue gradient
-            colormap = linear.RdBu_09.scale(-1, 1)
+            # Create color function - with correct red-blue gradient
+            # Using reversed scale (-1, 1) → (1, -1) ensures red is positive, blue is negative
+            colormap = linear.RdBu_09.scale(1, -1)
             
             # Add correlation points with proper colors
             for _, row in filtered_data.iterrows():
@@ -143,54 +144,13 @@ if visualization_type == "2D Weltkarte":
                     weight=1
                 ).add_to(m)
             
-            # Add legend
-            colormap.caption = 'Korrelation (Pearson)'
+            # Add legend with proper labeling
+            colormap.caption = 'Korrelation (Pearson): Rot=positiv, Blau=negativ'
             m.add_child(colormap)
             
             # Display the map
             st.write(f"Anzahl der angezeigten Datenpunkte: {len(filtered_data)}")
             st_folium(m, width=1000, height=600)
-            
-            # Alternative: Static map with Matplotlib
-            if st.button("Alternative statische Karte anzeigen"):
-                st.write("Generiere statische Karte...")
-                
-                # Import required packages
-                import matplotlib.pyplot as plt
-                
-                try:
-                    # Create figure
-                    fig, ax = plt.subplots(figsize=(12, 8))
-                    
-                    # Simple plot using matplotlib directly - no zoom but works reliably
-                    sc = ax.scatter(
-                        filtered_data['longitude'], 
-                        filtered_data['latitude'],
-                        c=filtered_data['correlation'], 
-                        cmap='RdBu_r',
-                        s=20 + 50 * filtered_data['correlation'].abs(),
-                        alpha=0.7,
-                        vmin=-1, vmax=1
-                    )
-                    
-                    # Add coastlines
-                    ax.set_facecolor('aliceblue')
-                    
-                    # Add colorbar
-                    cbar = plt.colorbar(sc, ax=ax, shrink=0.6)
-                    cbar.set_label('Korrelation (Pearson)')
-                    
-                    # Add title and labels
-                    plt.title(f"T-S Korrelation auf {selected_depth}m Tiefe")
-                    plt.xlabel('Längengrad')
-                    plt.ylabel('Breitengrad')
-                    plt.grid(True, alpha=0.3)
-                    
-                    # Display the plot
-                    st.pyplot(fig)
-                    
-                except Exception as e:
-                    st.error(f"Fehler bei der statischen Karte: {str(e)}")
             
     except Exception as e:
         st.error(f"Fehler bei der Kartenvisualisierung: {str(e)}")
