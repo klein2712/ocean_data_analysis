@@ -117,9 +117,15 @@ if visualization_type == "2D Weltkarte":
             # Create a base map
             m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB positron")
             
-            # Create proper color function - negative values (blue) to positive values (red)
-            # Fix: use RdBu_r and correct scale parameters
-            colormap = linear.RdBu_r.scale(-1, 1)
+            # Create proper color function with valid Branca colormap
+            # Use custom LinearColormap instead of non-existent RdBu_r
+            from branca.colormap import LinearColormap
+            colormap = LinearColormap(
+                colors=['blue', 'white', 'red'],  # Blue for negative, red for positive
+                vmin=-1,
+                vmax=1,
+                caption='Korrelation (Pearson): Blau=negativ, Weiß=neutral, Rot=positiv'
+            )
             
             # Add correlation points with proper colors
             for _, row in filtered_data.iterrows():
@@ -143,6 +149,9 @@ if visualization_type == "2D Weltkarte":
                     fill_opacity=0.7,
                     weight=1
                 ).add_to(m)
+            
+            # Add the colormap to the map (legend already included in caption)
+            m.add_child(colormap)
             
             # Add legend with proper labeling
             colormap.caption = 'Korrelation (Pearson): Rot=positiv, Blau=negativ'
