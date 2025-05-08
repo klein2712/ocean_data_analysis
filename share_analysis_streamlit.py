@@ -57,112 +57,117 @@ selected_depth = st.select_slider(
     options=depths
 )
 
-# Function to load correlation data for map visualization (cleaner version)
+# Function to load correlation data for map visualization
 @st.cache_data
 def load_correlation_data(depth):
-    # Try multiple path variations to handle different environments
-    possible_paths = [
-        f"./correlation_data/correlation_data_{depth}m.csv",
-        f"correlation_data/correlation_data_{depth}m.csv",
-        os.path.join("correlation_data", f"correlation_data_{depth}m.csv"),
-    ]
-    
-    # Try each possible path
-    for file_path in possible_paths:
-        try:
-            if os.path.exists(file_path):
-                data = pd.read_csv(file_path)
-                if len(data) > 0:
-                    return data
-        except Exception:
-            continue
-    
-    # Try loading from GitHub for deployed version
+    file_path = f"./correlation_data/correlation_data_{depth}m.csv"
     try:
-        github_url = f"https://raw.githubusercontent.com/klein2712/ocean_data_analysis/main/correlation_data/correlation_data_{depth}m.csv"
-        data = pd.read_csv(github_url)
+        data = pd.read_csv(file_path)
         return data
     except Exception as e:
         st.error(f"Fehler beim Laden der Korrelationsdaten: {str(e)}")
         return None
 
-# Replace the map visualization section
+# Display visualization based on selected type
 if visualization_type == "2D Weltkarte":
+    # 2D Map visualization using Streamlit's PyDeck
     try:
         data = load_correlation_data(selected_depth)
         
         if data is not None:
             st.write(f"Anzeige der Daten für Tiefe: {selected_depth}m - {len(data)} Datenpunkte")
-            
-            # Basic data validation and conversion
-            for col in ['latitude', 'longitude', 'correlation']:
-                if col in data.columns:
-                    data[col] = pd.to_numeric(data[col], errors='coerce')
-            
-            # Remove any rows with NaN values in critical columns
-            data = data.dropna(subset=['latitude', 'longitude', 'correlation'])
-            
-            # Filter for minimum correlation
+
+            # Filter controls
             min_correlation = st.slider("Minimale absolute Korrelation:", 0.0, 1.0, 0.0, 0.01)
-            filtered_data = data[data['correlation'].abs() >= min_correlation]
+            show_significant_only = st.checkbox("Nur signifikante Korrelationen anzeigen")
             
-            # Use folium for map visualization
-            st.write("Lade Karte...")
+            # Filter data based on user selections
+            filtered_data = data.copy()
+            if show_significant_only:
+                filtered_data = filtered_data[filtered_data['significant'] == True]
+            if min_correlation > 0:
+                filtered_data = filtered_data[abs(filtered_data['correlation']) >= min_correlation]
             
-            import folium
-            from streamlit_folium import st_folium
-            from folium.features import DivIcon
-            from branca.colormap import linear
-            
-            # Create a base map
-            m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB positron")
-            
-            # Create proper color function with valid Branca colormap
-            # Use custom LinearColormap instead of non-existent RdBu_r
-            from branca.colormap import LinearColormap
-            colormap = LinearColormap(
-                colors=['blue', 'white', 'red'],  # Blue for negative, red for positive
-                vmin=-1,
-                vmax=1,
-                caption='Korrelation (Pearson): Blau=negativ, Weiß=neutral, Rot=positiv'
-            )
-            
-            # Add correlation points with proper colors
-            for _, row in filtered_data.iterrows():
-                # Get color from colormap based on correlation value
-                color = colormap(row['correlation'])
+            # Prepare data for visualization
+            if len(filtered_data) > 0:
+                # Create color scale (red for positive, blue for negative)
+                filtered_data['color'] = filtered_data['correlation'].apply(
+                    lambda x: [255, int(255 * (1 - abs(x))), int(255 * (1 - abs(x)))] if x >= 0 
+                    else [int(255 * (1 - abs(x))), int(255 * (1 - abs(x))), 255]
+                )
                 
-                # Create popup content
-                popup_content = f"""
-                <b>Korrelation:</b> {row['correlation']:.2f}<br>
-                <b>Koordinaten:</b> {row['latitude']:.2f}, {row['longitude']:.2f}
-                """
+                # Scale point size based on correlation strength (5-20)
+                filtered_data['size'] = 5 + 15 * np.abs(filtered_data['correlation'])
                 
-                # Add marker to map with proper size and color
-                folium.CircleMarker(
-                    location=[row['latitude'], row['longitude']],
-                    radius=3 + 5 * abs(row['correlation']),  # Size based on correlation strength
-                    popup=folium.Popup(popup_content, max_width=200),
-                    color=color,
-                    fill=True,
-                    fill_color=color,
-                    fill_opacity=0.7,
-                    weight=1
-                ).add_to(m)
-            
-            # Add the colormap to the map (legend already included in caption)
-            m.add_child(colormap)
-            
-            # Add legend with proper labeling
-            colormap.caption = 'Korrelation (Pearson): Rot=positiv, Blau=negativ'
-            m.add_child(colormap)
-            
-            # Display the map
-            st.write(f"Anzahl der angezeigten Datenpunkte: {len(filtered_data)}")
-            st_folium(m, width=1000, height=600)
-            
+                # Create tooltip text
+                filtered_data['tooltip'] = filtered_data.apply(
+                    lambda row: f"Korrelation: {row['correlation']:.3f}\n" +
+                                f"P-Wert: {row['p_value']:.3f}\n" +
+                                f"Anzahl: {row['count']}\n" +
+                                f"Signifikant: {row['significant']}", 
+                    axis=1
+                )
+                
+                # Create PyDeck map
+                import pydeck as pdk
+                
+                # Configure layer
+                layer = pdk.Layer(
+                    "ScatterplotLayer",
+                    data=filtered_data,
+                    get_position=["longitude", "latitude"],
+                    get_color="color",
+                    get_radius="size * 1000",  # Scale up for visibility
+                    pickable=True,
+                    opacity=0.7,
+                    stroked=False,
+                    filled=True,
+                    radius_scale=1,
+                    radius_min_pixels=3,
+                    radius_max_pixels=15,
+                )
+                
+                # Set the initial viewport
+                view_state = pdk.ViewState(
+                    latitude=0,
+                    longitude=0,
+                    zoom=1,
+                    pitch=0,
+                )
+                
+                # Create deck
+                deck = pdk.Deck(
+                    layers=[layer],
+                    initial_view_state=view_state,
+                    map_style="light",
+                    tooltip={"text": "{tooltip}"}
+                )
+                
+                # Display the map
+                st.pydeck_chart(deck)
+                
+                # Add a color legend
+                st.markdown("""
+                <div style="display: flex; align-items: center; margin-top: 10px;">
+                    <div style="background: linear-gradient(to right, blue, white, red); height: 20px; width: 200px;"></div>
+                    <div style="display: flex; justify-content: space-between; width: 200px; margin-top: 5px;">
+                        <span>-1</span>
+                        <span>0</span>
+                        <span>1</span>
+                    </div>
+                </div>
+                <div style="margin-top: 5px;">
+                    <span style="color: blue; font-weight: bold;">Blau</span>: Negative Korrelation | 
+                    <span style="color: red; font-weight: bold;">Rot</span>: Positive Korrelation
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.warning("Keine Daten gefunden, die den Filterkriterien entsprechen.")
+                
     except Exception as e:
-        st.error(f"Fehler bei der Kartenvisualisierung: {str(e)}")
+        st.error(f"Fehler bei der Kartenvisualisierung für Tiefe {selected_depth}m: {str(e)}")
+        st.write("Bitte überprüfen Sie, ob die Datei existiert und korrekt formatiert ist.")
+
 else:  # 3D Scatterplot visualization (original)
     # Path to the HTML file for the selected depth
     html_file_path = os.path.join("saved_plots2", f"scatter_pearson-{selected_depth}m.html")
