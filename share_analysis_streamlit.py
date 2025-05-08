@@ -96,8 +96,8 @@ if visualization_type == "2D Weltkarte":
                     else [int(255 * (1 - abs(x))), int(255 * (1 - abs(x))), 255]
                 )
                 
-                # Scale point size based on correlation strength (5-20)
-                filtered_data['size'] = 5 + 15 * np.abs(filtered_data['correlation'])
+                # Scale point size based on correlation strength (make dots bigger)
+                filtered_data['size'] = 10 + 25 * np.abs(filtered_data['correlation'])  # Increased from 5+15 to 10+25
                 
                 # Create tooltip text
                 filtered_data['tooltip'] = filtered_data.apply(
@@ -117,14 +117,14 @@ if visualization_type == "2D Weltkarte":
                     data=filtered_data,
                     get_position=["longitude", "latitude"],
                     get_color="color",
-                    get_radius="size * 1000",  # Scale up for visibility
+                    get_radius="size * 1200",  # Increased from 1000 to 1200
                     pickable=True,
-                    opacity=0.7,
+                    opacity=0.8,  # Slightly increased opacity
                     stroked=False,
                     filled=True,
                     radius_scale=1,
-                    radius_min_pixels=3,
-                    radius_max_pixels=15,
+                    radius_min_pixels=6,  # Increased from 3 to 6
+                    radius_max_pixels=25,  # Increased from 15 to 25
                 )
                 
                 # Set the initial viewport
@@ -135,11 +135,11 @@ if visualization_type == "2D Weltkarte":
                     pitch=0,
                 )
                 
-                # Create deck
+                # Create deck with a map style that has blue water
                 deck = pdk.Deck(
                     layers=[layer],
                     initial_view_state=view_state,
-                    map_style="light",
+                    map_style="mapbox://styles/mapbox/natural-earth-2",  # Changed to a style with blue oceans
                     tooltip={"text": "{tooltip}"}
                 )
                 
