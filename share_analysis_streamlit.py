@@ -146,8 +146,8 @@ if visualization_type == "2D Weltkarte":
         # Calculate height to use most of viewport
         map_height = 800
         
-        # Create a Plotly figure with a color scale
-        fig = px.scatter_mapbox(
+        # Create a Plotly figure with a color scale - USING GEO INSTEAD OF MAPBOX
+        fig = px.scatter_geo(
             filtered_data,
             lat="latitude",
             lon="longitude",
@@ -155,21 +155,31 @@ if visualization_type == "2D Weltkarte":
             size="size",
             color_continuous_scale="RdBu_r",  # Red-Blue scale, red for positive, blue for negative
             range_color=[-1, 1],
-            zoom=1,
             height=map_height,
-            opacity=0.7,
-            mapbox_style="carto-positron",  # Use a more reliable style
             hover_data=["correlation", "p_value", "count", "significant"]
         )
-        
-        fig.update_layout(
-            margin=dict(l=0, r=0, t=0, b=0),
-            mapbox=dict(
-                center=dict(lat=0, lon=0),
-                zoom=0.8  # Adjust zoom to show more of the globe
-            )
+
+        # Configure the map layout to show the entire world
+        fig.update_geos(
+            projection_type="natural earth",  # A simple projection that works well
+            showcoastlines=True,
+            coastlinecolor="Black",
+            showland=True,
+            landcolor="lightgray",
+            showocean=True,
+            oceancolor="lightblue",
+            showlakes=True,
+            lakecolor="lightblue",
+            showcountries=True,
+            countrycolor="gray",
+            fitbounds="locations"  # Auto-fit to data points
         )
-        
+
+        fig.update_layout(
+            height=map_height,
+            margin=dict(l=0, r=0, t=0, b=0),
+        )
+
         # Display the map with full width
         st.plotly_chart(fig, use_container_width=True)
         
