@@ -100,88 +100,94 @@ def load_correlation_data(depth):
             
         return None
 
-# Display visualization based on selected type
+# Replace the map visualization section
 if visualization_type == "2D Weltkarte":
-    # 2D Map visualization (from ocean_map_visualization.py)
     try:
         data = load_correlation_data(selected_depth)
         
-        # Add debug information to check the loaded data
         if data is not None:
             st.write(f"Anzeige der Daten für Tiefe: {selected_depth}m - {len(data)} Datenpunkte")
             
-            # Add data validation and type conversion
-            # Ensure 'significant' is boolean
-            if 'significant' in data.columns:
-                if data['significant'].dtype != bool:
-                    data['significant'] = data['significant'].astype(str).map({'True': True, 'False': False})
-            
-            # Ensure numeric columns are numeric
-            for col in ['latitude', 'longitude', 'correlation', 'p_value']:
+            # Basic data validation and conversion
+            for col in ['latitude', 'longitude', 'correlation']:
                 if col in data.columns:
                     data[col] = pd.to_numeric(data[col], errors='coerce')
             
-            # Remove any rows with NaN in critical fields
+            # Remove any rows with NaN values in critical columns
             data = data.dropna(subset=['latitude', 'longitude', 'correlation'])
-            
-            # Show data summary for debugging
             st.write(f"Nach Datenbereinigung: {len(data)} Datenpunkte")
             
-            # Filter for minimum correlation
+            # Display first few rows to verify data structure
+            st.write("Beispieldaten (erste 3 Zeilen):")
+            st.dataframe(data.head(3))
+            
+            # Filter for minimum correlation - simplified
             min_correlation = st.slider("Minimale absolute Korrelation:", 0.0, 1.0, 0.0, 0.01)
-            show_significant_only = st.checkbox("Nur signifikante Korrelationen anzeigen")
+            filtered_data = data[data['correlation'].abs() >= min_correlation]
             
-            # Filter the data based on user selections
-            filtered_data = data.copy()
-            if show_significant_only and 'significant' in filtered_data.columns:
-                filtered_data = filtered_data[filtered_data['significant'] == True]
-            if min_correlation > 0:
-                filtered_data = filtered_data[abs(filtered_data['correlation']) >= min_correlation]
-            
-            # Prepare the data for visualization
-            filtered_data = filtered_data.reset_index(drop=True)
-            # Scale point size based on correlation strength
-            filtered_data['size'] = 3 + 7 * np.abs(filtered_data['correlation'])
-            
-            # Create a Plotly figure using scatter_geo
+            # SIMPLIFIED PLOTTING - Focus on just making points visible
             fig = px.scatter_geo(
                 filtered_data,
-                lat="latitude",
+                lat="latitude", 
                 lon="longitude",
                 color="correlation",
-                size="size",
+                # Remove size parameter for now
+                # size="size",
                 color_continuous_scale="RdBu_r",
                 range_color=[-1, 1],
-                opacity=0.7,
-                projection="natural earth",
-                hover_data=["correlation", "p_value"],
-                height=800,
+                height=600,
+                # Use a simpler projection
+                projection="equirectangular"
             )
             
-            fig.update_layout(
-                margin=dict(l=0, r=0, t=0, b=0),
-                geo=dict(
-                    showland=True,
-                    landcolor="rgb(217, 217, 217)",
-                    coastlinecolor="white", 
-                    showocean=True,
-                    oceancolor="rgb(242, 242, 242)",
-                    showcountries=True,
-                    countrycolor="white"
-                )
+            # Simplified layout
+            fig.update_geos(
+                showcoastlines=True,
+                coastlinecolor="black",
+                showland=True,
+                landcolor="lightgray",
+                showocean=True,
+                oceancolor="aliceblue"
             )
             
-            # Display row count after filtering
+            # Set marker size directly instead of using a column
+            fig.update_traces(marker=dict(size=5))
+            
+            # Display the map
             st.write(f"Anzahl der angezeigten Datenpunkte: {len(filtered_data)}")
-            
-            # Display the map with full width
             st.plotly_chart(fig, use_container_width=True)
             
+            # If the above doesn't work, try an alternative approach with go.Scattergeo
+            if st.button("Alternative Karte anzeigen"):
+                import plotly.graph_objects as go
+                
+                # Create a basic scattergeo plot
+                fig = go.Figure(data=go.Scattergeo(
+                    lon=filtered_data['longitude'],
+                    lat=filtered_data['latitude'],
+                    text=filtered_data['correlation'].round(2),
+                    mode='markers',
+                    marker=dict(
+                        size=5,
+                        color=filtered_data['correlation'],
+                        colorscale='RdBu_r',
+                        cmin=-1,
+                        cmax=1,
+                        colorbar=dict(title='Korrelation')
+                    )
+                ))
+                
+                fig.update_layout(
+                    title=f"T-S Korrelation auf {selected_depth}m Tiefe",
+                    height=600
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
     except Exception as e:
-        st.error(f"Fehler bei der Kartenvisualisierung für Tiefe {selected_depth}m: {str(e)}")
+        st.error(f"Fehler bei der Kartenvisualisierung: {str(e)}")
         import traceback
         st.write(traceback.format_exc())
-        st.write("Bitte überprüfen Sie, ob die Datei existiert und korrekt formatiert ist.")
 
 else:  # 3D Scatterplot visualization (original)
     # Path to the HTML file for the selected depth
