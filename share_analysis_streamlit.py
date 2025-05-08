@@ -103,6 +103,7 @@ if visualization_type == "2D Weltkarte":
     try:
         data = load_correlation_data(selected_depth)
         
+        # Replace the mapbox visualization with a more reliable geo visualization
         if data is not None:
             st.write(f"Anzeige der Daten für Tiefe: {selected_depth}m - {len(data)} Datenpunkte")
 
@@ -119,14 +120,11 @@ if visualization_type == "2D Weltkarte":
             
             # Prepare the data for visualization
             filtered_data = filtered_data.reset_index(drop=True)
-            # Scale circle size based on correlation strength
-            filtered_data['size'] = 5 + 15 * np.abs(filtered_data['correlation'])
+            # Scale point size based on correlation strength
+            filtered_data['size'] = 3 + 7 * np.abs(filtered_data['correlation'])
             
-            # Calculate height to use most of viewport
-            map_height = 800
-            
-            # Create a Plotly figure with a color scale
-            fig = px.scatter_mapbox(
+            # Create a Plotly figure using scatter_geo instead of scatter_mapbox
+            fig = px.scatter_geo(
                 filtered_data,
                 lat="latitude",
                 lon="longitude",
@@ -134,18 +132,22 @@ if visualization_type == "2D Weltkarte":
                 size="size",
                 color_continuous_scale="RdBu_r",  # Red-Blue scale, red for positive, blue for negative
                 range_color=[-1, 1],
-                zoom=1,
-                height=map_height,
                 opacity=0.7,
-                mapbox_style="open-street-map",  # No API token required
-                hover_data=["correlation", "p_value", "count", "significant"]
+                projection="natural earth",  # Natural Earth projection looks good
+                hover_data=["correlation", "p_value", "count", "significant"],
+                height=800,
             )
             
             fig.update_layout(
                 margin=dict(l=0, r=0, t=0, b=0),
-                mapbox=dict(
-                    center=dict(lat=0, lon=0),
-                    zoom=1
+                geo=dict(
+                    showland=True,
+                    landcolor="rgb(217, 217, 217)",
+                    coastlinecolor="white",
+                    showocean=True,
+                    oceancolor="rgb(242, 242, 242)",
+                    showcountries=True,
+                    countrycolor="white"
                 )
             )
             
