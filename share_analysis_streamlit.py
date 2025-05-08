@@ -57,14 +57,14 @@ selected_depth = st.select_slider(
     options=depths
 )
 
-# Function to load correlation data for map visualization
+# Function to load correlation data for map visualization (cleaner version)
 @st.cache_data
 def load_correlation_data(depth):
     # Try multiple path variations to handle different environments
     possible_paths = [
         f"./correlation_data/correlation_data_{depth}m.csv",
-        f"correlation_data/correlation_data_{depth}m.csv",  # No leading dot
-        os.path.join("correlation_data", f"correlation_data_{depth}m.csv"),  # OS-agnostic path
+        f"correlation_data/correlation_data_{depth}m.csv",
+        os.path.join("correlation_data", f"correlation_data_{depth}m.csv"),
     ]
     
     # Try each possible path
@@ -77,27 +77,13 @@ def load_correlation_data(depth):
         except Exception:
             continue
     
-    # If we get here, try to load directly from GitHub (if this is deployed)
+    # Try loading from GitHub for deployed version
     try:
-        # Replace with your actual GitHub repository URL - adjust this to your repo!
         github_url = f"https://raw.githubusercontent.com/klein2712/ocean_data_analysis/main/correlation_data/correlation_data_{depth}m.csv"
-        st.write(f"Attempting to load from: {github_url}")
         data = pd.read_csv(github_url)
-        st.write(f"Loaded data with columns: {list(data.columns)}")
-        st.write(f"Data types: {data.dtypes}")
         return data
     except Exception as e:
         st.error(f"Fehler beim Laden der Korrelationsdaten: {str(e)}")
-        
-        # Show debugging information
-        st.error("Debugging Information:")
-        st.write(f"Working directory: {os.getcwd()}")
-        try:
-            st.write("Available directories:")
-            st.write(os.listdir("."))
-        except:
-            pass
-            
         return None
 
 # Replace the map visualization section
@@ -115,11 +101,6 @@ if visualization_type == "2D Weltkarte":
             
             # Remove any rows with NaN values in critical columns
             data = data.dropna(subset=['latitude', 'longitude', 'correlation'])
-            st.write(f"Nach Datenbereinigung: {len(data)} Datenpunkte")
-            
-            # Display first few rows to verify data structure
-            st.write("Beispieldaten (erste 3 Zeilen):")
-            st.dataframe(data.head(3))
             
             # Filter for minimum correlation
             min_correlation = st.slider("Minimale absolute Korrelation:", 0.0, 1.0, 0.0, 0.01)
@@ -128,27 +109,21 @@ if visualization_type == "2D Weltkarte":
             # Use folium for map visualization
             st.write("Lade Karte...")
             
-            # Install folium if not already installed
-            import pip
-            try:
-                import folium
-                from streamlit_folium import st_folium
-            except ImportError:
-                st.write("Installing required packages...")
-                pip.main(['install', 'folium', 'streamlit-folium'])
-                import folium
-                from streamlit_folium import st_folium
+            import folium
+            from streamlit_folium import st_folium
+            from folium.features import DivIcon
+            from branca.colormap import linear
             
             # Create a base map
             m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB positron")
             
-            # Add correlation points with colors
+            # Create color function - properly maps correlation values to red-blue gradient
+            colormap = linear.RdBu_09.scale(-1, 1)
+            
+            # Add correlation points with proper colors
             for _, row in filtered_data.iterrows():
-                # Determine color based on correlation value
-                if row['correlation'] > 0:
-                    color = f'#{int(255 * min(1, row["correlation"])):#04x}0000'
-                else:
-                    color = f'#0000{int(255 * min(1, abs(row["correlation"]))):#04x}'
+                # Get color from colormap based on correlation value
+                color = colormap(row['correlation'])
                 
                 # Create popup content
                 popup_content = f"""
@@ -156,76 +131,69 @@ if visualization_type == "2D Weltkarte":
                 <b>Koordinaten:</b> {row['latitude']:.2f}, {row['longitude']:.2f}
                 """
                 
-                # Add marker to map
+                # Add marker to map with proper size and color
                 folium.CircleMarker(
                     location=[row['latitude'], row['longitude']],
                     radius=3 + 5 * abs(row['correlation']),  # Size based on correlation strength
                     popup=folium.Popup(popup_content, max_width=200),
                     color=color,
                     fill=True,
-                    fill_opacity=0.7
+                    fill_color=color,
+                    fill_opacity=0.7,
+                    weight=1
                 ).add_to(m)
+            
+            # Add legend
+            colormap.caption = 'Korrelation (Pearson)'
+            m.add_child(colormap)
             
             # Display the map
             st.write(f"Anzahl der angezeigten Datenpunkte: {len(filtered_data)}")
             st_folium(m, width=1000, height=600)
             
             # Alternative: Static map with Matplotlib
-            if st.button("Alternative Karte anzeigen"):
-                st.write("Generiere alternative Karte...")
+            if st.button("Alternative statische Karte anzeigen"):
+                st.write("Generiere statische Karte...")
                 
                 # Import required packages
                 import matplotlib.pyplot as plt
-                import matplotlib.colors as mcolors
-                from mpl_toolkits.basemap import Basemap
                 
                 try:
                     # Create figure
                     fig, ax = plt.subplots(figsize=(12, 8))
                     
-                    # Create map
-                    m = Basemap(projection='robin', resolution='l', 
-                                lat_0=0, lon_0=0, ax=ax)
-                    
-                    # Draw map elements
-                    m.drawcoastlines()
-                    m.drawcountries()
-                    m.fillcontinents(color='lightgray', lake_color='aliceblue')
-                    m.drawmapboundary(fill_color='aliceblue')
-                    m.drawparallels(np.arange(-90, 91, 30), labels=[1, 0, 0, 0])
-                    m.drawmeridians(np.arange(-180, 181, 60), labels=[0, 0, 0, 1])
-                    
-                    # Convert lat/lon to map coordinates
-                    x, y = m(filtered_data['longitude'].values, filtered_data['latitude'].values)
-                    
-                    # Create a scatter plot of points
-                    sc = m.scatter(
-                        x, y, 
+                    # Simple plot using matplotlib directly - no zoom but works reliably
+                    sc = ax.scatter(
+                        filtered_data['longitude'], 
+                        filtered_data['latitude'],
                         c=filtered_data['correlation'], 
                         cmap='RdBu_r',
-                        s=20, 
+                        s=20 + 50 * filtered_data['correlation'].abs(),
                         alpha=0.7,
                         vmin=-1, vmax=1
                     )
+                    
+                    # Add coastlines
+                    ax.set_facecolor('aliceblue')
                     
                     # Add colorbar
                     cbar = plt.colorbar(sc, ax=ax, shrink=0.6)
                     cbar.set_label('Korrelation (Pearson)')
                     
-                    # Add title
+                    # Add title and labels
                     plt.title(f"T-S Korrelation auf {selected_depth}m Tiefe")
+                    plt.xlabel('Längengrad')
+                    plt.ylabel('Breitengrad')
+                    plt.grid(True, alpha=0.3)
                     
                     # Display the plot
                     st.pyplot(fig)
                     
                 except Exception as e:
-                    st.error(f"Fehler bei der alternativen Karte: {str(e)}")
+                    st.error(f"Fehler bei der statischen Karte: {str(e)}")
             
     except Exception as e:
         st.error(f"Fehler bei der Kartenvisualisierung: {str(e)}")
-        import traceback
-        st.write(traceback.format_exc())
-
 else:  # 3D Scatterplot visualization (original)
     # Path to the HTML file for the selected depth
     html_file_path = os.path.join("saved_plots2", f"scatter_pearson-{selected_depth}m.html")
