@@ -13,23 +13,29 @@ st.title("Studiengang KIK / AKI - Projekt Auswertung von Meeresdaten")
 
 # Placeholder text section
 st.markdown("""
-## Ziel des Projektes
+<h2 style='font-size:3.0em'>Ziel des Projekts</h2>
+<p style='font-size:1.6em'>
+Im Rahmen des Moduls <b>„KI in den Lifesciences“</b> verfolgt das vorliegende Projekt das Ziel, Meeresdaten systematisch auszuwerten und insbesondere die Korrelation zwischen Temperatur und Salzgehalt des Ozeans zu untersuchen. Die Analyse basiert auf Messdaten der <b>World Ocean Database</b>, die für sämtliche Breiten- und Längengrade sowie verschiedene Tiefenebenen des Ozeans vorliegen. Eine weiterführende, freiwillige Fragestellung bestand darin, die Daten gezielt auf potenzielle Muster oder Auffälligkeiten hin zu analysieren, um neue wissenschaftliche Erkenntnisse über ozeanografische Zusammenhänge zu gewinnen.
+</p>
 
-Das Ziel des Projektes ist die Auswertung von Meeresdaten, insbesondere der Korrelation zwischen Temperatur und Salzgehalt des Ozeans.
-
-Die Daten stammen von der **World Ocean Database** und umfassen Messungen aus verschiedenen Tiefen des Ozeans für jeden Breiten- und Längengrad.
-
-""")
+<h2 style='font-size:3.0em'>Datensatz</h2>
+<p style='font-size:1.6em'>
+Für die Untersuchung wurde der frei zugängliche Datensatz des <b>World Ocean Atlas</b> ausgewählt. Es wurde gezielt der Datensatz aus dem Jahr 2023 herangezogen, da dieser den aktuellsten Stand der verfügbaren Messungen repräsentiert. Der Datensatz umfasst für jedes Längen- und Breitengradpaar Messstationen auf unterschiedlichen Tiefenmetern, die eine Vielzahl ozeanografischer Parameter wie Salzgehalt, Temperatur, Stickstoffgehalt und weitere chemische sowie physikalische Größen erfassen. Im Rahmen dieses Projekts lag der Fokus insbesondere auf den Parametern Temperatur und Salzgehalt, da für diese Variablen die umfangreichsten und zuverlässigsten Messreihen vorliegen. Die verwendeten Werte stellen Durchschnittsdaten (Averages) aus dem Zeitraum 2015 bis 2022 dar, was sowohl die Aktualität als auch die Präzision der Analyse gewährleistet. Über 95 % der Messstationen liefern für Temperatur und Salzgehalt valide Daten, sodass eine robuste und repräsentative Auswertung dieser beiden Schlüsselparameter möglich ist.
+</p>""", unsafe_allow_html=True)
 
 # Define available depth levels
 depths = [0, 50, 100, 150, 200, 300, 400, 500, 750, 1000, 1250, 1500, 1750, 1950]
 
 # Section for scatter plots
-st.header("Korrelation: Salzgehalt und Temperatur")
-st.write("""
-Die folgenden Grafiken zeigen die Korrelation zwischen Salzgehalt und Temperatur des Ozeans 
-auf verschiedenen Wassertiefen. Wählen Sie eine Tiefe, um die entsprechende Visualisierung anzuzeigen.
-""")
+st.markdown("<h2 style='font-size:3.0em;'>Korrelation: Salzgehalt und Temperatur (T-S Korrelation) für verschiedene Meerestiefen</h2>", unsafe_allow_html=True)
+st.markdown("""
+<p style='font-size:1.6em'>
+Die folgenden Grafiken zeigen die Temperatur-Salzgehalt-Korrelation (T-S-Korrelation) für verschiedene Meerestiefen.<br>
+Die Korrelation wurde mittels Pearson-Korrelation berechnet. Der Korrelationswert liegt zwischen -1 und 1: Ein positiver Wert bedeutet, dass beide Parameter gemeinsam steigen oder fallen (z.&nbsp;B. steigt die Temperatur, steigt auch der Salzgehalt). Ein negativer Wert zeigt an, dass ein Anstieg des einen Parameters mit einem Rückgang des anderen einhergeht (z.&nbsp;B. steigt die Temperatur, sinkt der Salzgehalt).<br>
+Wählen Sie eine Tiefe, um die entsprechende Visualisierung anzuzeigen.<br>
+<b>ANMERKUNG:</b> Die Legende in den Grafiken ist fehlerhaft. <span style='color:red;'>Rot</span> steht für positive Korrelation, <span style='color:blue;'>Blau</span> für negative Korrelation.
+</p>
+""", unsafe_allow_html=True)
 
 # Depth selection slider
 selected_depth = st.select_slider(
@@ -135,9 +141,15 @@ if os.path.exists(correlation_file_path):
     if html_content:
         # Display the interactive plot
         html(html_content, height=800, scrolling=False)
-    else:
-        st.error(f"Die Datei konnte mit keiner bekannten Kodierung gelesen werden.")
-else:
-    st.error(f"Die Datei '{correlation_file_path}' wurde nicht gefunden. Bitte überprüfen Sie, ob der Ordner 'saved_plots' existiert und die Datei enthält.")
 
+
+st.markdown("<h2 style='font-size:3.0em;'>Fazit aus den Graphen</h2>", unsafe_allow_html=True)
+st.markdown("""
+<p style='font-size:1.6em'>
+Die Analyse der Temperatur-Salzgehalt-Korrelation zeigt, dass über alle Tiefen hinweg durchschnittlich eine positive Korrelation zwischen Temperatur und Salzgehalt besteht. Dies deutet darauf hin, dass in wärmeren Gewässern tendenziell auch höhere Salzgehalte zu beobachten sind.
+Dennoch gibt es in manchen Gebieten die Korrelation umgekehrt zu sein, wie in der Nähe des Äquators und in der Nähe der Pole. Dies könnte auf verschiedene ozeanografische Prozesse zurückzuführen sein.
+Schließlich ist außerdem zu erkennen, dass die Korrelation mit zunehmender Tiefe zuerst abnimmt und dann wieder zunimmt. Dies könnte darauf hindeuten, dass in den oberen Wasserschichten andere Prozesse wirken als in den tieferen Schichten.
+Die Ergebnisse dieser Analyse könnten wertvolle Hinweise auf die ozeanografischen Prozesse und deren Wechselwirkungen geben, die das Klima und die Ökosysteme der Ozeane beeinflussen.
+</p>
+""", unsafe_allow_html=True)
     #NOTE: For first plots we may want to use st.maps
