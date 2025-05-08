@@ -148,17 +148,29 @@ if visualization_type == "2D Weltkarte":
                 
                 # Add a color legend
                 st.markdown("""
-                <div style="display: flex; align-items: center; margin-top: 10px;">
-                    <div style="background: linear-gradient(to right, blue, white, red); height: 20px; width: 200px;"></div>
-                    <div style="display: flex; justify-content: space-between; width: 200px; margin-top: 5px;">
-                        <span>-1</span>
-                        <span>0</span>
-                        <span>1</span>
+                <div style="background-color: #f0f2f6; padding: 15px; border-radius: 5px; margin-top: 20px; max-width: 600px;">
+                    <h4 style="margin-top: 0; margin-bottom: 10px;">Legende: Korrelationskoeffizient</h4>
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <div style="display: flex; align-items: center;">
+                            <div style="background: linear-gradient(to right, rgb(0,0,255), rgb(128,128,255), rgb(255,255,255), rgb(255,128,128), rgb(255,0,0)); 
+                                        height: 25px; width: 400px; border-radius: 4px; border: 1px solid #ccc;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; width: 400px;">
+                            <span style="font-weight: bold;">-1.0</span>
+                            <span style="font-weight: bold;">-0.5</span>
+                            <span style="font-weight: bold;">0</span>
+                            <span style="font-weight: bold;">+0.5</span>
+                            <span style="font-weight: bold;">+1.0</span>
+                        </div>
                     </div>
-                </div>
-                <div style="margin-top: 5px;">
-                    <span style="color: blue; font-weight: bold;">Blau</span>: Negative Korrelation | 
-                    <span style="color: red; font-weight: bold;">Rot</span>: Positive Korrelation
+                    <div style="margin-top: 10px;">
+                        <span style="color: blue; font-weight: bold;">Blau</span>: Negative Korrelation (gegenläufig) | 
+                        <span style="color: red; font-weight: bold;">Rot</span>: Positive Korrelation (gleichläufig)
+                    </div>
+                    <div style="margin-top: 5px; font-size: 0.9em; color: #555;">
+                        Die Größe der Punkte entspricht der Stärke der Korrelation. Je stärker die Korrelation (näher an -1 oder +1), 
+                        desto größer der Punkt auf der Karte.
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
             else:
