@@ -117,14 +117,14 @@ if visualization_type == "2D Weltkarte":
                     data=filtered_data,
                     get_position=["longitude", "latitude"],
                     get_color="color",
-                    get_radius="size * 1000",  # Scale up for visibility
+                    get_radius="size * 1200",  # Scale up for visibility
                     pickable=True,
-                    opacity=0.7,
+                    opacity=0.8,
                     stroked=False,
                     filled=True,
                     radius_scale=1,
-                    radius_min_pixels=3,
-                    radius_max_pixels=15,
+                    radius_min_pixels=6,
+                    radius_max_pixels=25,
                 )
                 
                 # Set the initial viewport
@@ -139,7 +139,7 @@ if visualization_type == "2D Weltkarte":
                 deck = pdk.Deck(
                     layers=[layer],
                     initial_view_state=view_state,
-                    map_style="light",
+                    map_style="road",
                     tooltip={"text": "{tooltip}"}
                 )
                 
