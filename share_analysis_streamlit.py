@@ -272,8 +272,8 @@ st.markdown("<h2 style='font-size:3.0em;'>Fazit aus den Daten</h2>", unsafe_allo
 st.markdown("""
 <p style='font-size:1.6em'>
 Die Analyse der Temperatur-Salzgehalt-Korrelation zeigt, dass über alle Tiefen hinweg durchschnittlich eine positive Korrelation zwischen Temperatur und Salzgehalt besteht. Dies deutet darauf hin, dass in wärmeren Gewässern tendenziell auch höhere Salzgehalte zu beobachten sind.
-Dennoch gibt es in manchen Gebieten die Korrelation umgekehrt zu sein, wie in der Nähe des Äquators und in der Nähe der Pole. Dies könnte auf verschiedene ozeanografische Prozesse zurückzuführen sein.
-Schließlich ist außerdem zu erkennen, dass die Korrelation mit zunehmender Tiefe zuerst abnimmt und dann wieder zunimmt. Dies könnte darauf hindeuten, dass in den oberen Wasserschichten andere Prozesse wirken als in den tieferen Schichten.
+Dennoch scheint in manchen Gebieten die Korrelation umgekehrt zu sein, wie in der Nähe des Äquators und in der Nähe der Pole. Dies könnte auf verschiedene ozeanografische Prozesse zurückzuführen sein.
+Schließlich ist außerdem zu erkennen, dass die Korrelation mit zunehmender Tiefe zuerst abnimmt und dann anschließend wieder zunimmt. Dies könnte darauf hindeuten, dass in den oberen Wasserschichten andere Prozesse wirken als in den tieferen Schichten.
 Die Ergebnisse dieser Analyse könnten wertvolle Hinweise auf die ozeanografischen Prozesse und deren Wechselwirkungen geben, die das Klima und die Ökosysteme der Ozeane beeinflussen.
 </p>
 """, unsafe_allow_html=True)
